@@ -5,6 +5,7 @@ from tkinter import messagebox
 from PIL import Image
 from get_questions import get_data
 import time
+import matplotlib.pyplot as plt
 
 
 class GUI(ctk.CTk):
@@ -16,12 +17,18 @@ class GUI(ctk.CTk):
 
         self.question = ""
         self.options = ""
-        self.correctanser = ""
+        self.correct_answer = ""
 
         self.selected_options = []
 
+        self.chart_colors = ["#74ff00", "#ff3200"]
+        self.chart_labels = ["Correct Answers", "Wrong Answers"]
+
         self.name = ""
         self.roll_number = ""
+
+        # Initialize results_frame as None
+        self.results_frame = None
 
         self.title("Kurukshetra")
         self.geometry("1000x1000")
@@ -36,30 +43,28 @@ class GUI(ctk.CTk):
     def create_login_frame(self):
         frame = ctk.CTkFrame(self.container)
 
-        name_label = ctk.CTkLabel(frame, text="Enter Your Name :")
+        name_label = ctk.CTkLabel(frame, text="Enter Your Name:")
         name_label.grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.name_entry = ctk.CTkEntry(frame)
         self.name_entry.grid(row=0, column=1, padx=10, pady=10)
 
-        roll_label = ctk.CTkLabel(frame, text="Enter you roll number :")
+        roll_label = ctk.CTkLabel(frame, text="Enter your Roll Number:")
         roll_label.grid(row=1, column=0, padx=10, pady=10, sticky="w")
         self.roll_entry = ctk.CTkEntry(frame)
         self.roll_entry.grid(row=1, column=1, padx=10, pady=10)
 
-        self.login_button = ctk.CTkButton(
-            frame, text="Start Quiz now !!", command=self.login_button_fun)
-        self.login_button.grid(row=3, column=0, columnspan=2, pady=20)
-
         self.capture_image_button = ctk.CTkButton(
             frame, text="Capture Your Photo", command=self.capture_image)
-        self.capture_image_button.grid(
-            row=2, column=0, columnspan=2, pady=20)
+        self.capture_image_button.grid(row=2, column=0, columnspan=2, pady=20)
+
+        self.login_button = ctk.CTkButton(
+            frame, text="Start Quiz Now!!", command=self.login_button_fun)
+        self.login_button.grid(row=3, column=0, columnspan=2, pady=20)
 
         image = Image.open(self.image_path)
         self.capture_image = ctk.CTkImage(
             light_image=image, dark_image=image, size=(100, 100))
-        self.img_label = ctk.CTkLabel(
-            frame, image=self.capture_image, text="")
+        self.img_label = ctk.CTkLabel(frame, image=self.capture_image, text="")
         self.img_label.grid(row=0, column=3, rowspan=3, padx=10)
 
         return frame
@@ -79,13 +84,9 @@ class GUI(ctk.CTk):
 
     def quiz_frame(self):
         quizframe = ctk.CTkFrame(self.container)
-
-        # -------------- Sidebar ----------
-
-        # sidebar doesnt stretch horizontally
         quizframe.grid_columnconfigure(0, weight=0)
-        # main area stretches horizontally
         quizframe.grid_columnconfigure(1, weight=1)
+        quizframe.grid_rowconfigure(0, weight=1)
 
         self.sidebar = ctk.CTkFrame(quizframe, corner_radius=1)
         self.sidebar.grid(row=0, column=0, sticky='nsw')
@@ -95,53 +96,97 @@ class GUI(ctk.CTk):
             self.sidebar, text="Profile Pic")
         self.sidebar_image_label.grid(row=0, column=0, padx=10, pady=10)
 
-        self.name_sidebar_label = ctk.CTkLabel(
-            self.sidebar, text=self.name)
-        self.name_sidebar_label.grid(
-            row=1, column=0, padx=10, pady=10, sticky="n")
+        self.name_sidebar_label = ctk.CTkLabel(self.sidebar, text=self.name)
+        self.name_sidebar_label.grid(row=1, column=0, padx=10, pady=10)
 
         self.roll_sidebar_label = ctk.CTkLabel(
             self.sidebar, text=self.roll_number)
-        self.roll_sidebar_label.grid(
-            row=2, column=0, padx=10, pady=10, sticky="n")
+        self.roll_sidebar_label.grid(row=2, column=0, padx=10, pady=10)
 
         self.timer_label = ctk.CTkLabel(
             self.sidebar, text="00:00:00", font=("Arial", 16))
         self.timer_label.grid(row=3, column=0, padx=10, pady=10)
 
-        # ---------------main content ---------
-
-        self.quiz_area = ctk.CTkScrollableFrame(quizframe,)
-        self.quiz_area.grid(column=1, sticky="nsew")
-        self.quiz_area.grid_rowconfigure(0, weight=1)
-        self.quiz_area.grid_columnconfigure(1, weight=1)
+        self.quiz_area = ctk.CTkScrollableFrame(quizframe)
+        self.quiz_area.grid(row=0, column=1, sticky="nsew")
+        self.quiz_area.grid_columnconfigure(0, weight=1)
 
         for i in range(1, 6):
             self.get_questions(id=i)
 
-            self.question_frame = ctk.CTkScrollableFrame(quizframe,)
-            self.question_frame.grid(row=i, column=1, sticky="nsew")
+            question_container = ctk.CTkFrame(self.quiz_area)
+            question_container.pack(fill="x", pady=10, padx=10)
+
+            question_label = ctk.CTkLabel(
+                question_container, text=f"Q{i}: {self.question}", anchor="w")
+            question_label.pack(anchor="w", pady=(0, 5))
+
             selected_option = ctk.StringVar(value="")
-            question = ctk.CTkLabel(
-                self.question_frame, text=self.question, anchor="w")
-            radio1 = ctk.CTkRadioButton(
-                self.question_frame, text=self.options[0], variable=selected_option, value=self.options[0])
-            radio2 = ctk.CTkRadioButton(
-                self.question_frame, text=self.options[1], variable=selected_option, value=self.options[1])
-            radio3 = ctk.CTkRadioButton(
-                self.question_frame, text=self.options[2], variable=selected_option, value=self.options[2])
-            radio4 = ctk.CTkRadioButton(
-                self.question_frame, text=self.options[3], variable=selected_option, value=self.options[3])
+            for option in self.options:
+                radio = ctk.CTkRadioButton(
+                    question_container, text=option, variable=selected_option, value=option)
+                radio.pack(anchor="w", pady=2)
+
             self.selected_options.append(selected_option)
-            question.pack(pady=10)
-            radio1.pack(anchor="w", pady=5)
-            radio2.pack(anchor="w", pady=5)
-            radio3.pack(anchor="w", pady=5)
-            radio4.pack(anchor="w", pady=5)
+
+        self.submit_button = ctk.CTkButton(
+            self.quiz_area, text="Submit Answers", command=self.submit_answers)
+        self.submit_button.pack(pady=20)
+
         return quizframe
 
+    def create_results_frame(self):
+        frame = ctk.CTkFrame(self.container)
+
+        name_label = ctk.CTkLabel(frame, text=f"Name: {self.name}")
+        name_label.grid(row=0, column=0, sticky='nsw', padx=20, pady=10)
+
+        roll_label = ctk.CTkLabel(
+            frame, text=f"Roll Number: {self.roll_number}")
+        roll_label.grid(row=1, column=0, sticky='nsw', padx=20, pady=10)
+
+        try:
+            profile_image = Image.open("opencv_frame.png")
+            profile_image_ctk = ctk.CTkImage(profile_image, size=(100, 100))
+            image_label = ctk.CTkLabel(frame, image=profile_image_ctk, text="")
+            image_label.grid(row=0, column=1, rowspan=2, padx=20, pady=10)
+        except FileNotFoundError:
+            image_label = ctk.CTkLabel(frame, text="No Profile Image")
+            image_label.grid(row=0, column=1, rowspan=2, padx=20, pady=10)
+
+        try:
+            result_chart = Image.open("Result.png")
+            chart_image_ctk = ctk.CTkImage(result_chart, size=(300, 300))
+            chart_label = ctk.CTkLabel(frame, image=chart_image_ctk, text="")
+            chart_label.grid(row=2, column=0, columnspan=2, padx=20, pady=20)
+        except FileNotFoundError:
+            chart_label = ctk.CTkLabel(frame, text="Results Not Available")
+            chart_label.grid(row=2, column=0, columnspan=2, padx=20, pady=20)
+
+        return frame
+
+    def submit_answers(self):
+        no_answers_correct = 0
+        data = get_data()  # Get all data once
+        for i in range(5):
+            if data[str(i + 1)]["correct_answer"] == self.selected_options[i].get():
+                no_answers_correct += 1
+        wrong_answers = 5 - no_answers_correct
+        chart_value = [no_answers_correct, wrong_answers]
+
+        plt.figure(figsize=(6, 6))
+        plt.pie(chart_value, labels=self.chart_labels,
+                autopct='%1.1f%%', startangle=90, colors=self.chart_colors)
+        plt.title("Results")
+        plt.savefig("Result.png")
+        plt.close()  # Close the figure to free memory
+
+        # Always create a new results frame
+        self.results_frame = self.create_results_frame()
+        self.show_frame(self.results_frame)
+
     def get_questions(self, id):
-        data = get_data()
+        data = get_data()  # get_data() takes no parameters
         self.question = data[str(id)]["question"]
         self.options = data[str(id)]["options"]
 
@@ -157,12 +202,10 @@ class GUI(ctk.CTk):
 
     def get_image(self):
         cam = cv2.VideoCapture(0)
-
         if not cam.isOpened():
             self.alert_and_exit("Webcam not opened")
 
-        cv2.namedWindow("Capture Window")
-
+        cv2.namedWindow("Capture Image")
         while not self.image_captured:
             ret, frame = cam.read()
             if not ret:
@@ -170,33 +213,32 @@ class GUI(ctk.CTk):
                 break
 
             cv2.imshow("Capture Image", frame)
-
             k = cv2.waitKey(1)
             if k % 256 == 32:  # SPACE pressed
                 img_name = "opencv_frame.png"
                 cv2.imwrite(img_name, frame)
                 self.image_captured = True
                 self.image_path = img_name
-                print(f"Image saved as {img_name}")
                 break
+
         cam.release()
         cv2.destroyAllWindows()
 
-        self.image = Image.open(self.image_path)
+        image = Image.open(self.image_path)
         self.capture_image = ctk.CTkImage(
-            light_image=self.image, dark_image=self.image, size=(100, 100))
+            light_image=image, dark_image=image, size=(100, 100))
         self.img_label.configure(image=self.capture_image)
 
     def alert_and_exit(self, msg):
         messagebox.showerror(
-            title="Alert", message=f"The program has experienced failure due to : {msg}")
+            title="Alert", message=f"The program has experienced failure due to: {msg}")
         exit()
 
     def update_timer(self):
         elapsed = int(time.time() - self.start_time)
         hours, rem = divmod(elapsed, 3600)
         minutes, seconds = divmod(rem, 60)
-        if hasattr(self, 'timer_label'):  # only update if timer exists
+        if hasattr(self, 'timer_label'):
             self.timer_label.configure(
                 text=f"{hours:02}:{minutes:02}:{seconds:02}")
         self.after(1000, self.update_timer)
