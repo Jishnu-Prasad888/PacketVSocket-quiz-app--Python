@@ -1,4 +1,5 @@
 import csv
+import pprint
 
 questions = "questions.csv"
 

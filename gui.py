@@ -17,7 +17,7 @@ class GUI(ctk.CTk):
 
         self.question = ""
         self.options = ""
-        self.correct_answer = ""
+        self.correct_answer = []
 
         self.selected_options = []
 
@@ -88,12 +88,19 @@ class GUI(ctk.CTk):
         quizframe.grid_columnconfigure(1, weight=1)
         quizframe.grid_rowconfigure(0, weight=1)
 
+        # Sidebar setup
         self.sidebar = ctk.CTkFrame(quizframe, corner_radius=1)
         self.sidebar.grid(row=0, column=0, sticky='nsw')
 
-        self.sidebar_image = Image.open("opencv_frame.png")
-        self.sidebar_image_label = ctk.CTkLabel(
-            self.sidebar, text="Profile Pic")
+        try:
+            self.sidebar_image = Image.open("opencv_frame.png")
+            self.sidebar_image_ctk = ctk.CTkImage(
+                self.sidebar_image, size=(100, 100))
+            self.sidebar_image_label = ctk.CTkLabel(
+                self.sidebar, image=self.sidebar_image_ctk, text="")
+        except:
+            self.sidebar_image_label = ctk.CTkLabel(
+                self.sidebar, text="Profile Pic")
         self.sidebar_image_label.grid(row=0, column=0, padx=10, pady=10)
 
         self.name_sidebar_label = ctk.CTkLabel(self.sidebar, text=self.name)
@@ -107,10 +114,15 @@ class GUI(ctk.CTk):
             self.sidebar, text="00:00:00", font=("Arial", 16))
         self.timer_label.grid(row=3, column=0, padx=10, pady=10)
 
+        # Quiz area setup
         self.quiz_area = ctk.CTkScrollableFrame(quizframe)
         self.quiz_area.grid(row=0, column=1, sticky="nsew")
         self.quiz_area.grid_columnconfigure(0, weight=1)
 
+        # Clear previous selections
+        self.selected_options = []
+
+        # Create questions
         for i in range(1, 6):
             self.get_questions(id=i)
 
@@ -121,13 +133,19 @@ class GUI(ctk.CTk):
                 question_container, text=f"Q{i}: {self.question}", anchor="w")
             question_label.pack(anchor="w", pady=(0, 5))
 
-            selected_option = ctk.StringVar(value="")
+            # Single StringVar per question
+            option_var = ctk.StringVar(value="")
+            self.selected_options.append(option_var)  # Store for submission
+
+            # Create radio buttons sharing the same variable
             for option in self.options:
                 radio = ctk.CTkRadioButton(
-                    question_container, text=option, variable=selected_option, value=option)
+                    question_container,
+                    text=option,
+                    variable=option_var,
+                    value=option
+                )
                 radio.pack(anchor="w", pady=2)
-
-            self.selected_options.append(selected_option)
 
         self.submit_button = ctk.CTkButton(
             self.quiz_area, text="Submit Answers", command=self.submit_answers)
@@ -167,9 +185,21 @@ class GUI(ctk.CTk):
 
     def submit_answers(self):
         no_answers_correct = 0
-        data = get_data()  # Get all data once
+        data = get_data()
+
+        answers = []
+
+        for i, option_var in enumerate(self.selected_options):
+            self.selected_options.append(option_var)
+
+        print(self.selected_options)
+
+        for i in range(1, 6):
+            answers.append(data[str(i)]['correct_answer'])
         for i in range(5):
-            if data[str(i + 1)]["correct_answer"] == self.selected_options[i].get():
+            if answers[i] == self.selected_options[i]:
+                print(answers[i])
+                print(self.selected_options[i].get())
                 no_answers_correct += 1
         wrong_answers = 5 - no_answers_correct
         chart_value = [no_answers_correct, wrong_answers]
@@ -179,9 +209,8 @@ class GUI(ctk.CTk):
                 autopct='%1.1f%%', startangle=90, colors=self.chart_colors)
         plt.title("Results")
         plt.savefig("Result.png")
-        plt.close()  # Close the figure to free memory
+        plt.close()
 
-        # Always create a new results frame
         self.results_frame = self.create_results_frame()
         self.show_frame(self.results_frame)
 
