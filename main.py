@@ -187,30 +187,35 @@ class GUI(ctk.CTk):
         no_answers_correct = 0
         data = get_data()
 
-        answers = []
-
-        for i, option_var in enumerate(self.selected_options):
-            self.selected_options.append(option_var)
-
-        print(self.selected_options)
-
-        for i in range(1, 6):
-            answers.append(data[str(i)]['correct_answer'])
+        # Get correct answers from data
+        correct_answers = [data[str(i)]['correct_answer'] for i in range(1, 6)]
+        print(correct_answers)
+        print("----------------")
+        # Evaluate user-selected answers
         for i in range(5):
-            if answers[i] == self.selected_options[i]:
-                print(answers[i])
-                print(self.selected_options[i].get())
+            user_answer = self.selected_options[i].get()
+            print(user_answer)
+            if user_answer == correct_answers[i]:
                 no_answers_correct += 1
+
+        # Calculate results
         wrong_answers = 5 - no_answers_correct
         chart_value = [no_answers_correct, wrong_answers]
 
+        # Generate and save result pie chart
         plt.figure(figsize=(6, 6))
-        plt.pie(chart_value, labels=self.chart_labels,
-                autopct='%1.1f%%', startangle=90, colors=self.chart_colors)
+        plt.pie(
+            chart_value,
+            labels=self.chart_labels,
+            autopct='%1.1f%%',
+            startangle=90,
+            colors=self.chart_colors
+        )
         plt.title("Results")
         plt.savefig("Result.png")
         plt.close()
 
+        # Show results frame
         self.results_frame = self.create_results_frame()
         self.show_frame(self.results_frame)
 
